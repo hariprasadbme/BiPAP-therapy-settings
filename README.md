@@ -1,2 +1,79 @@
 # BiPAP-therapy-settings-
 Below is a more detailed Python code example that implements a machine learning-based approach to dynamically adjust BiPAP therapy settings based on patient data. This code incorporates data preprocessing, feature engineering, model training, hyperparameter tuning, and model evaluation.
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
+
+# Sample patient data (features)
+# Example features: respiratory rate, tidal volume, inspiratory pressure, expiratory pressure, sleep stage, oxygen saturation, etc.
+patient_data = pd.DataFrame({
+    'Respiratory Rate': [18, 20, 22, 24, 26],
+    'Tidal Volume': [450, 500, 550, 600, 650],
+    'Inspiratory Pressure': [8, 10, 12, 14, 16],
+    'Expiratory Pressure': [4, 5, 6, 7, 8],
+    'Sleep Stage': ['REM', 'NREM', 'REM', 'NREM', 'REM'],
+    'Oxygen Saturation': [95, 92, 93, 90, 94],
+    # Add more patient data as needed
+})
+
+# Sample BiPAP therapy settings (labels)
+# Example labels: Inspiratory Pressure Level, Expiratory Pressure Level, Breath Rate, etc.
+therapy_settings = pd.DataFrame({
+    'Mode': ['S/T', 'V/A', 'S/T', 'S/T', 'V/A'],
+    'Inspiratory Pressure Level': [12, 14, 10, 16, 14],
+    'Expiratory Pressure Level': [6, 8, 5, 8, 7],
+    'Breath Rate': [16, 18, 14, 20, 18],
+    # Add more therapy settings as needed
+})
+
+# Preprocess data
+patient_data['Sleep Stage'] = patient_data['Sleep Stage'].map({'REM': 1, 'NREM': 0})
+therapy_settings['Mode'] = therapy_settings['Mode'].map({'S/T': 0, 'V/A': 1})
+
+# Feature engineering (if needed)
+# Add additional features, normalize data, handle missing values, etc.
+
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(patient_data, therapy_settings, test_size=0.2, random_state=42)
+
+# Train a Random Forest Regressor
+param_grid = {
+    'n_estimators': [50, 100, 200],
+    'max_depth': [3, 5, 7, None],
+    'min_samples_split': [2, 5, 10],
+    'min_samples_leaf': [1, 2, 4],
+    'random_state': [42]
+}
+rf = RandomForestRegressor()
+grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1)
+grid_search.fit(X_train, y_train)
+
+# Select best model
+best_rf = grid_search.best_estimator_
+
+# Make predictions on test data
+predictions = best_rf.predict(X_test)
+
+# Evaluate model
+mse = mean_squared_error(y_test, predictions)
+print("Mean Squared Error:", mse)
+
+# Example patient data for which therapy settings need to be predicted
+new_patient_data = pd.DataFrame({
+    'Respiratory Rate': [28],
+    'Tidal Volume': [700],
+    'Inspiratory Pressure': [18],
+    'Expiratory Pressure': [10],
+    'Sleep Stage': [1],
+    'Oxygen Saturation': [96],
+})
+
+# Predict therapy settings for new patient data
+predicted_settings = best_rf.predict(new_patient_data)
+print("Predicted Therapy Settings:")
+print("Mode:", 'S/T' if predicted_settings[0][0] < 0.5 else 'V/A')
+print("Inspiratory Pressure Level:", int(round(predicted_settings[0][1])))
+print("Expiratory Pressure Level:", int(round(predicted_settings[0][2])))
+print("Breath Rate:", int(round(predicted_settings[0][3])))
